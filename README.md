@@ -4,8 +4,18 @@ vbo-tools
 Simple utilities for RaceLogic VBO files.
 
 
-csv2vbo.py
-----------
+Usage
+-----
+
+Install the tools system-wide in editable mode (or normally):
+
+```bash
+pip install -e .
+```
+
+This exposes the `vbo-tools` CLI command with two main subcommands: `csv2vbo` and `add-video`.
+
+### csv2vbo
 
 Converts .csv files produced by various datalogging software to
 .vbo files produced by RaceLogic's dataloggers and understood
@@ -21,12 +31,19 @@ currently supports the following .csv variants:
     TrackMaster .csv can be obtained by manual export
     from a .xls file (only the overview and lap sheets).
 
-csv2vbo.py expects the path to an input .csv file and an output .vbo file
-as arguments. It will either detect the variant of the input .csv file
-automatically or, failing that, exit with an error. For example, to convert
-"log.csv" into "log.vbo", the following command needs to be issued:
+`vbo-tools csv2vbo` expects the path to an input .csv file and an optional output .vbo file.
+It will either detect the variant of the input .csv file automatically or, failing that, exit with an error. For example, to convert "log.csv" into "log.vbo", run:
 
-$ python csv2vbo.py log.csv log.vbo
+```bash
+vbo-tools csv2vbo log.csv -o log.vbo
+```
+
+You can optionally bundle a video immediately during conversion using `-v`:
+
+```bash
+vbo-tools csv2vbo log.csv -v log.mp4
+```
+*(The `-o` / `--output` flag is optional. If omitted, it will generate a file with the same name and the `.vbo` extension).*
 
 
 The script does not have overly strict requirements on the input .csv
@@ -52,16 +69,17 @@ software itself does not do interpolation), but it cannot supplement
 the vastly more accurate output of a 10 Hz GPS.
 
 
-add_video_vbo.py
-----------------
+### add-video
+
+### add-video
 
 Bundles an existing .vbo file with a corresponding video file (e.g., .mp4, .avi)
 so it can be correctly loaded and synchronized in RaceLogic Circuit Tools.
 
-The script creates a folder structure similar to that produced by VBO Editor,
-copies the video file appropriately named, and modifies the .vbo file to include
-the required `[avi]` section and `avisynctime` columns for each telemetry data point.
+It will rename the video file to match the required prefix alongside the VBO file. If the original video file is located in a different directory, it will be copied instead.
 
 Usage:
 
-$ python add_video_vbo.py <vbo_in> <video_file>
+```bash
+vbo-tools add-video log.vbo video.mp4
+```

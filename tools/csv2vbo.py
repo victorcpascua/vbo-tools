@@ -589,31 +589,39 @@ def write_vbo(vbo_data, vbo_output):
 ### Read the CSV input, find a suitable converter,
 ### convert the CSV data to VBO data, and write the VBO output.
 
-if __name__ == "__main__":
-	import argparse
-
-	parser = argparse.ArgumentParser(description="Convert CSV data to VBO format")
-	parser.add_argument("input_file", help="Input CSV file")
-	parser.add_argument("output_file", help="Output VBO file")
-	args = parser.parse_args()
-
-	try:
-		with open(args.input_file, "r", encoding="utf-8", newline="") as csv_file:
-			csv_data = read_csv(csv_file)
-	except IOError as e:
-		print("error: could not open input file: %s" % e, file=sys.stderr)
-		sys.exit(-1)
+def convert_file(input_file, output_file):
+	with open(input_file, "r", encoding="utf-8", newline="") as csv_file:
+		csv_data = read_csv(csv_file)
 
 	converter = find_converter(csv_data)
 	if converter is None:
-		print("error: unable to recognize input format", file=sys.stderr)
-		sys.exit(-1)
+		raise ValueError("unable to recognize input format")
 
 	vbo_data = interpolate_vbo(converter.convert(csv_data), Decimal("0.10"))
 
+	with open(output_file, "w", encoding="utf-8", newline="") as vbo_output:
+		write_vbo(format_vbo(vbo_data), vbo_output)
+
+if __name__ == "__main__":
+	import argparse
+	import os
+
+	parser = argparse.ArgumentParser(description="Convert CSV data to VBO format")
+	parser.add_argument("input_pos", nargs='?', help="Input CSV file (positional)")
+	parser.add_argument("-i", "--input", dest="input_opt", help="Input CSV file (option)")
+	parser.add_argument("-o", "--output", dest="output_file", help="Output VBO file (optional)")
+	args = parser.parse_args()
+
+	input_file = args.input_pos or args.input_opt
+	if not input_file:
+		parser.error("Input file is required. Provide it as a positional argument or using -i/--input.")
+
+	output_file = args.output_file
+	if not output_file:
+		output_file = os.path.splitext(input_file)[0] + ".vbo"
+
 	try:
-		with open(args.output_file, "w", encoding="utf-8", newline="") as vbo_output:
-			write_vbo(format_vbo(vbo_data), vbo_output)
-	except IOError as e:
-		print("error: could not open output file: %s" % e, file=sys.stderr)
+		convert_file(input_file, output_file)
+	except Exception as e:
+		print("error: %s" % e, file=sys.stderr)
 		sys.exit(-1)

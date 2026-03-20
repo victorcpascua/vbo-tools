@@ -14,21 +14,27 @@ def add_video_to_vbo(vbo_path, video_path):
     base_name = os.path.splitext(os.path.basename(vbo_path))[0]
     prefix = f"{base_name}_vid"
 
-    # Create folder to match VBO Editor's layout
-    folder_path = os.path.join(os.path.dirname(os.path.abspath(vbo_path)), prefix)
-    os.makedirs(folder_path, exist_ok=True)
+    # Output in the SAME folder as the original VBO
+    out_dir = os.path.dirname(os.path.abspath(vbo_path))
     
-    # Define structure paths
-    vbo_out = os.path.join(folder_path, f"{prefix}Data.vbo")
+    # Define structure paths: name is {prefix}.vbo (122_vid.vbo)
+    vbo_out = os.path.join(out_dir, f"{prefix}.vbo")
     
+    # The video is named {prefix}0001.{ext}
     video_ext = os.path.splitext(video_path)[1].lstrip('.').upper()
     if not video_ext: video_ext = 'AVI'
     
-    vid_out = os.path.join(folder_path, f"{prefix}0001.{video_ext}")
+    vid_out = os.path.join(out_dir, f"{prefix}0001.{video_ext}")
     
-    print(f"Bundling to {folder_path} ...")
+    print(f"Creating VBO with video sync at: {vbo_out}")
     if os.path.abspath(video_path) != os.path.abspath(vid_out):
-        shutil.copy2(video_path, vid_out)
+        video_dir = os.path.dirname(os.path.abspath(video_path))
+        if video_dir == out_dir:
+            print(f"Renaming video {os.path.basename(video_path)} -> {os.path.basename(vid_out)}")
+            os.rename(video_path, vid_out)
+        else:
+            print(f"Copying video {os.path.basename(video_path)} -> {vid_out}")
+            shutil.copy2(video_path, vid_out)
 
     with open(vbo_path, 'r', encoding='latin-1') as f:
         lines = f.readlines()
@@ -82,14 +88,17 @@ def add_video_to_vbo(vbo_path, video_path):
                     if time_index != -1 and time_index < len(parts):
                         time_str = parts[time_index]
                         try:
-                            time_val = float(time_str)
-                            if time_val > 100000:
-                                hh = int(time_val / 10000)
-                                mm = int((time_val - hh * 10000) / 100)
-                                ss = time_val - hh * 10000 - mm * 100
-                                total_seconds = hh * 3600 + mm * 60 + ss
+                            # Time format can be seconds or HHMMSS.ms UTC time
+                            time_parts = time_str.split('.')
+                            if len(time_parts[0]) == 5 or len(time_parts[0]) == 6:
+                                time_str_padded = time_parts[0].zfill(6)
+                                hh = int(time_str_padded[0:2])
+                                mm = int(time_str_padded[2:4])
+                                ss = int(time_str_padded[4:6])
+                                fraction = float("0." + time_parts[1]) if len(time_parts) > 1 else 0.0
+                                total_seconds = hh * 3600 + mm * 60 + ss + fraction
                             else:
-                                total_seconds = time_val
+                                total_seconds = float(time_str)
                                 
                             sync_time_ms = int(round(total_seconds * 1000.0))
                             
@@ -117,11 +126,4 @@ def add_video_to_vbo(vbo_path, video_path):
     with open(vbo_out, 'w', encoding='latin-1') as f:
         f.writelines(out_lines)
         
-    print(f"Successfully generated {vbo_out} bundle.")
-
-if __name__ == '__main__':
-    if len(sys.argv) < 3:
-        print("Usage: python add_video_vbo.py <vbo_in> <video_file>")
-        sys.exit(1)
-        
-    add_video_to_vbo(sys.argv[1], sys.argv[2])
+    print(f"Successfully generated {vbo_out}.")

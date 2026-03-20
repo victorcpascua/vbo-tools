@@ -57,5 +57,4 @@ target/
 .vscode/
 
 # Others
-input/*
-output/*
+process/
