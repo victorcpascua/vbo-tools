@@ -43,7 +43,17 @@ You can optionally bundle a video immediately during conversion using `-v`:
 ```bash
 vbo-tools csv2vbo log.csv -v log.mp4
 ```
-*(The `-o` / `--output` flag is optional. If omitted, it will generate a file with the same name and the `.vbo` extension).*
+*(The `-o` / `--output` flag is optional. If omitted, it will generate a file with the same name and the `.vbo` extension. If the `-v` flag is used, the intermediate `.vbo` file is automatically cleaned up, leaving only the bundled `_vid.vbo`).*
+
+**Advanced Options:**
+- `-s`, `--sync-offset`: Time offset in seconds (e.g., `2.5` or `-1.2`) to synchronize the video with the data (only applicable if `-v` is used). Possitive values: data starts later in the video. Negative values: data starts earlier in the video.
+- `--trim-start`: Seconds to drop from the start of the telemetry log.
+- `--trim-end`: Seconds to drop from the end of the telemetry log.
+
+Example with options:
+```bash
+vbo-tools csv2vbo log.csv -v log.mp4 -s 2.5 --trim-start 150 --trim-end 10.5
+```
 
 
 The script does not have overly strict requirements on the input .csv
@@ -80,4 +90,14 @@ Usage:
 
 ```bash
 vbo-tools add-video log.vbo video.mp4
+```
+
+**Advanced Options:**
+- `-s`, `--sync-offset`: Time offset in seconds (e.g., `2.5` or `-1.2`) to synchronize the video with the data. Possitive values: data starts later in the video. Negative values: data starts earlier in the video.
+- `--trim-start`: Seconds to drop from the start of the telemetry log.
+- `--trim-end`: Seconds to drop from the end of the telemetry log.
+
+Example with options:
+```bash
+vbo-tools add-video log.vbo video.mp4 -s 2.5 --trim-start 150 --trim-end 10.5
 ```

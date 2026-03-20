@@ -15,12 +15,16 @@ def main():
     parser_csv.add_argument("-o", "--output", dest="output_file", help="Output VBO file (optional)")
     parser_csv.add_argument("-v", "--video", dest="video_file", help="Input video file to bundle after conversion (optional)")
     parser_csv.add_argument("-s", "--sync-offset", type=float, default=0.0, dest="offset", help="Time offset in seconds to synchronize video with data (used with -v)")
+    parser_csv.add_argument("--trim-start", type=float, default=0.0, dest="trim_start", help="Seconds to cut from the start of the log")
+    parser_csv.add_argument("--trim-end", type=float, default=0.0, dest="trim_end", help="Seconds to cut from the end of the log")
 
     # add-video parser
     parser_vid = subparsers.add_parser("add-video", help="Add video synchronization data to a VBO file")
     parser_vid.add_argument("input_data", help="Input VBO file")
     parser_vid.add_argument("video_file", help="Input video file (.mp4 or .avi)")
     parser_vid.add_argument("-s", "--sync-offset", type=float, default=0.0, dest="offset", help="Time offset in seconds to synchronize video with data")
+    parser_vid.add_argument("--trim-start", type=float, default=0.0, dest="trim_start", help="Seconds to cut from the start of the log")
+    parser_vid.add_argument("--trim-end", type=float, default=0.0, dest="trim_end", help="Seconds to cut from the end of the log")
 
     args = parser.parse_args()
 
@@ -38,12 +42,16 @@ def main():
             output_file = os.path.splitext(input_file)[0] + ".vbo"
             
         try:
-            csv2vbo.convert_file(input_file, output_file)
+            csv2vbo.convert_file(input_file, output_file, trim_start=args.trim_start, trim_end=args.trim_end)
             print(f"Successfully converted {input_file} to {output_file}")
             
             if args.video_file:
                 # Add video to the newly converted VBO
                 add_video.add_video_to_vbo(output_file, args.video_file, offset=args.offset)
+                
+                # Delete the unbundled VBO so we do not duplicate unnecessary files.
+                if os.path.exists(output_file):
+                    os.remove(output_file)
         except Exception as e:
             print("error: %s" % e, file=sys.stderr)
             sys.exit(-1)
@@ -63,7 +71,7 @@ def main():
             parser_vid.error("Video file must be .avi or .mp4.")
                 
         try:
-            add_video.add_video_to_vbo(input_file, video_file, offset=args.offset)
+            add_video.add_video_to_vbo(input_file, video_file, offset=args.offset, trim_start=args.trim_start, trim_end=args.trim_end)
         except Exception as e:
             print(f"Error adding video to VBO: {e}", file=sys.stderr)
             sys.exit(1)

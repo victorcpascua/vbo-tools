@@ -2,7 +2,7 @@ import sys
 import os
 import shutil
 
-def add_video_to_vbo(vbo_path, video_path, offset=0.0):
+def add_video_to_vbo(vbo_path, video_path, offset=0.0, trim_start=0.0, trim_end=0.0):
     if not os.path.exists(vbo_path):
         print("Error: VBO file not found.")
         return
@@ -44,31 +44,36 @@ def add_video_to_vbo(vbo_path, video_path, offset=0.0):
     header_modified = False
     time_index = -1
     
+    pre_data_lines = []
+    data_lines = []
+    data_seconds = []
+    post_data_lines = []
+    
     i = 0
+    in_data = False
     while i < len(lines):
         line = lines[i]
         stripped = line.strip()
 
         if stripped.startswith('['):
             section = stripped
-            if section == '[column names]':
-                out_lines.append("[avi]\n")
-                out_lines.append(f"{prefix}\n")
-                out_lines.append(f"{video_ext}\n")
-                out_lines.append("\n")
-                
-                out_lines.append(line)
-            else:
-                out_lines.append(line)
-        else:
-            if section == '[header]':
-                if not stripped and not header_modified:
-                    out_lines.append("avifileindex\n")
-                    out_lines.append("avisynctime\n")
-                    header_modified = True
-                out_lines.append(line)
-                
+            if section == '[data]':
+                in_data = True
+                pre_data_lines.append(line)
             elif section == '[column names]':
+                pre_data_lines.append("[avi]\n")
+                pre_data_lines.append(f"{prefix}\n")
+                pre_data_lines.append(f"{video_ext}\n")
+                pre_data_lines.append("\n")
+                pre_data_lines.append(line)
+            else:
+                if in_data:
+                    in_data = False
+                    post_data_lines.append(line)
+                else:
+                    pre_data_lines.append(line)
+        else:
+            if section == '[column names]':
                 if stripped:
                     cols = stripped.split()
                     try:
@@ -78,10 +83,17 @@ def add_video_to_vbo(vbo_path, video_path, offset=0.0):
                         return
                     
                     new_cols = cols + ['avifileindex', 'avisynctime']
-                    out_lines.append(" ".join(new_cols) + "\n")
+                    pre_data_lines.append(" ".join(new_cols) + "\n")
                 else:
-                    out_lines.append(line)
+                    pre_data_lines.append(line)
                     
+            elif section == '[header]':
+                if not stripped and not header_modified:
+                    pre_data_lines.append("avifileindex\n")
+                    pre_data_lines.append("avisynctime\n")
+                    header_modified = True
+                pre_data_lines.append(line)
+                
             elif section == '[data]':
                 if stripped:
                     parts = stripped.split()
@@ -108,20 +120,41 @@ def add_video_to_vbo(vbo_path, video_path, offset=0.0):
                             parts.append(avifileindex)
                             parts.append(avisynctime)
                             
-                            out_lines.append(" ".join(parts) + "\n")
+                            data_lines.append(" ".join(parts) + "\n")
+                            data_seconds.append(total_seconds)
                         except ValueError:
                             parts.append("0001")
                             parts.append("00000000")
-                            out_lines.append(" ".join(parts) + "\n")
+                            data_lines.append(" ".join(parts) + "\n")
+                            data_seconds.append(None)
                     else:
-                        out_lines.append(line)
+                        data_lines.append(line)
+                        data_seconds.append(None)
                 else:
-                    out_lines.append(line)
-                    
+                    data_lines.append(line)
+                    data_seconds.append(None)
             else:
-                out_lines.append(line)
+                if in_data:
+                    post_data_lines.append(line)
+                else:
+                    pre_data_lines.append(line)
                 
         i += 1
+        
+    # Apply trimming logic
+    if len(data_seconds) > 0 and (trim_start > 0 or trim_end > 0):
+        valid_seconds = [s for s in data_seconds if s is not None]
+        if valid_seconds:
+            min_sec = valid_seconds[0] + trim_start
+            max_sec = valid_seconds[-1] - trim_end
+            
+            trimmed_data_lines = []
+            for line, sec in zip(data_lines, data_seconds):
+                if sec is None or (min_sec <= sec <= max_sec):
+                    trimmed_data_lines.append(line)
+            data_lines = trimmed_data_lines
+
+    out_lines = pre_data_lines + data_lines + post_data_lines
 
     with open(vbo_out, 'w', encoding='latin-1') as f:
         f.writelines(out_lines)

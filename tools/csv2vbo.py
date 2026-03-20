@@ -589,7 +589,7 @@ def write_vbo(vbo_data, vbo_output):
 ### Read the CSV input, find a suitable converter,
 ### convert the CSV data to VBO data, and write the VBO output.
 
-def convert_file(input_file, output_file):
+def convert_file(input_file, output_file, trim_start=0.0, trim_end=0.0):
 	with open(input_file, "r", encoding="utf-8", newline="") as csv_file:
 		csv_data = read_csv(csv_file)
 
@@ -598,6 +598,20 @@ def convert_file(input_file, output_file):
 		raise ValueError("unable to recognize input format")
 
 	vbo_data = interpolate_vbo(converter.convert(csv_data), Decimal("0.10"))
+	
+	if (trim_start > 0 or trim_end > 0) and "time" in vbo_data.header():
+		time_index = vbo_data.header().index("time")
+		rows = vbo_data.rows()
+		if len(rows) > 0:
+			start_time = float(rows[0][time_index])
+			end_time = float(rows[-1][time_index])
+			min_time = start_time + trim_start
+			max_time = end_time - trim_end
+			filtered_rows = [r for r in rows if min_time <= float(r[time_index]) <= max_time]
+			vbo_data = DataFrame(
+				head=vbo_data.header(), data=filtered_rows,
+				info=vbo_data.comments(), units=vbo_data.units()
+			)
 
 	with open(output_file, "w", encoding="utf-8", newline="") as vbo_output:
 		write_vbo(format_vbo(vbo_data), vbo_output)
