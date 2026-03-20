@@ -2,7 +2,7 @@ import sys
 import os
 import shutil
 
-def add_video_to_vbo(vbo_path, video_path):
+def add_video_to_vbo(vbo_path, video_path, offset=0.0):
     if not os.path.exists(vbo_path):
         print("Error: VBO file not found.")
         return
@@ -100,7 +100,7 @@ def add_video_to_vbo(vbo_path, video_path):
                             else:
                                 total_seconds = float(time_str)
                                 
-                            sync_time_ms = int(round(total_seconds * 1000.0))
+                            sync_time_ms = int(round((total_seconds + offset) * 1000.0))
                             
                             avifileindex = "0001"
                             avisynctime = f"{sync_time_ms:08d}"

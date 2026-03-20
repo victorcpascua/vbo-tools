@@ -14,11 +14,13 @@ def main():
     parser_csv.add_argument("-i", "--input", dest="input_opt", help="Input CSV file (option)")
     parser_csv.add_argument("-o", "--output", dest="output_file", help="Output VBO file (optional)")
     parser_csv.add_argument("-v", "--video", dest="video_file", help="Input video file to bundle after conversion (optional)")
+    parser_csv.add_argument("-s", "--sync-offset", type=float, default=0.0, dest="offset", help="Time offset in seconds to synchronize video with data (used with -v)")
 
     # add-video parser
     parser_vid = subparsers.add_parser("add-video", help="Add video synchronization data to a VBO file")
     parser_vid.add_argument("input_data", help="Input VBO file")
     parser_vid.add_argument("video_file", help="Input video file (.mp4 or .avi)")
+    parser_vid.add_argument("-s", "--sync-offset", type=float, default=0.0, dest="offset", help="Time offset in seconds to synchronize video with data")
 
     args = parser.parse_args()
 
@@ -41,7 +43,7 @@ def main():
             
             if args.video_file:
                 # Add video to the newly converted VBO
-                add_video.add_video_to_vbo(output_file, args.video_file)
+                add_video.add_video_to_vbo(output_file, args.video_file, offset=args.offset)
         except Exception as e:
             print("error: %s" % e, file=sys.stderr)
             sys.exit(-1)
@@ -61,7 +63,7 @@ def main():
             parser_vid.error("Video file must be .avi or .mp4.")
                 
         try:
-            add_video.add_video_to_vbo(input_file, video_file)
+            add_video.add_video_to_vbo(input_file, video_file, offset=args.offset)
         except Exception as e:
             print(f"Error adding video to VBO: {e}", file=sys.stderr)
             sys.exit(1)
