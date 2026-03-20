@@ -7,7 +7,7 @@ Simple utilities for RaceLogic VBO files.
 csv2vbo.py
 ----------
 
-Converts .csv files produced by various datalogging software
+Converts .csv files produced by various datalogging software to
 .vbo files produced by RaceLogic's dataloggers and understood
 by the CircuitTools software. The script requires Python 3 and
 currently supports the following .csv variants:
@@ -16,17 +16,17 @@ currently supports the following .csv variants:
   - G-Tech Fanatic
   - TrackMaster
   - QStarz LT6000
+  - RaceStudio 2
 
     TrackMaster .csv can be obtained by manual export
     from a .xls file (only the overview and lap sheets).
 
-csv2vbo.py expects a .csv file on standard input and writes
-a .vbo file to standard output. It will either detect the variant
-of the input .csv file automatically or, failing that, exit with
-an error. For example, to convert "log.csv" into "log.vbo", the 
-following command needs to be issued:
+csv2vbo.py expects the path to an input .csv file and an output .vbo file
+as arguments. It will either detect the variant of the input .csv file
+automatically or, failing that, exit with an error. For example, to convert
+"log.csv" into "log.vbo", the following command needs to be issued:
 
-$ ./csv2vbo.py < log.csv > log.vbo
+$ python csv2vbo.py log.csv log.vbo
 
 
 The script does not have overly strict requirements on the input .csv
@@ -50,3 +50,18 @@ the two data rows, with 0.1 second increments to simulate a 10 Hz GPS.
 This makes working with the data in CircuitTools more reasonable (the
 software itself does not do interpolation), but it cannot supplement
 the vastly more accurate output of a 10 Hz GPS.
+
+
+add_video_vbo.py
+----------------
+
+Bundles an existing .vbo file with a corresponding video file (e.g., .mp4, .avi)
+so it can be correctly loaded and synchronized in RaceLogic Circuit Tools.
+
+The script creates a folder structure similar to that produced by VBO Editor,
+copies the video file appropriately named, and modifies the .vbo file to include
+the required `[avi]` section and `avisynctime` columns for each telemetry data point.
+
+Usage:
+
+$ python add_video_vbo.py <vbo_in> <video_file>

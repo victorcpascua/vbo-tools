@@ -360,7 +360,61 @@ class QStarzConverter(Converter):
 		)
 
 
-def read_csv(input):
+class RaceStudio2Converter(Converter):
+
+	def __init__(self):
+		super(RaceStudio2Converter, self).__init__()
+
+		self._base_map = {
+			"GPS Nsat": "satellites",
+			"Time": "time",
+			"GPS Latitude": "latitude",
+			"GPS Longitude": "longitude",
+			"GPS Speed": "velocity kmh",
+			"GPS Heading": "heading",
+			"GPS Altitude": "height"
+		}
+
+		self._user_map = {
+			"GPS LatAcc": ("LatAcc", "g"),
+			"GPS LonAcc": ("LongAcc", "g"),
+			"GPS Slope": ("GPS_Slope", "deg"),
+			"GPS Gyro": ("GPS_Gyro", "deg/s"),
+			"GPS PosAccuracy": ("GPS_PosAccuracy", "mm"),
+			"GPS SpdAccuracy": ("GPS_SpdAccuracy", "km/h"),
+			"GPS Radius": ("GPS_Radius", "m"),
+			"Best Today Diff": ("BestTodayDiff", "time"),
+			"Water Temp": ("WaterTemp", "C"),
+			"AccelerometerX": ("AccelX", "g"),
+			"AccelerometerY": ("AccelY", "g"),
+			"AccelerometerZ": ("AccelZ", "g"),
+			"GyroX": ("GyroX", "deg/s"),
+			"GyroY": ("GyroY", "deg/s"),
+			"GyroZ": ("GyroZ", "deg/s"),
+			"Logger Temperature": ("LoggerTemp", "C"),
+			"RPM": ("RPM", "rpm"),
+			"Steering Angle": ("SteeringAngle", "deg"),
+			"Calculated Gear": ("CalculatedGear", "#")
+		}
+
+		self._value_map.update({
+			v[0]: lambda val: self._decimal_or_default(val, 0.0) 
+			for v in self._user_map.values() if v[0] not in self._value_map
+		})
+
+	def _preprocess(self, csv_data):
+		data_rows = csv_data.rows()
+		# Remove the units row if it's there
+		if len(data_rows) > 0 and data_rows[0][0] == "s":
+			data_rows = data_rows[1:]
+
+		return DataFrame(
+			head=csv_data.header(), data=data_rows,
+			info=csv_data.comments(), units=csv_data.units()
+		)
+
+
+def read_csv(csv_input):
 	reader = csv.reader(csv_input, delimiter=",", quotechar='"')
 
 	# Filter out empty rows and strip all space around data items.
@@ -383,7 +437,8 @@ def find_converter(data):
 		RaceChronoConverter(),
 		GTechFanaticConverter(),
 		TrackMasterConverter(),
-		QStarzConverter()
+		QStarzConverter(),
+		RaceStudio2Converter()
 	)
 
 	for converter in converters:
@@ -451,11 +506,7 @@ def format_vbo(vbo_data):
 	}
 
 	# Make sure we have all the formatters we need.
-	formatters = [vbo_formatters.get(name) for name in vbo_data.header()]
-	if None in formatters:
-		raise Exception(
-			"no formatter for %s" % vbo_data.header()[formatters.index(None)]
-		)
+	formatters = [vbo_formatters.get(name, lambda v: str(v)) for name in vbo_data.header()]
 
 	# Format all values in all rows.
 	new_rows = [
@@ -538,15 +589,31 @@ def write_vbo(vbo_data, vbo_output):
 ### Read the CSV input, find a suitable converter,
 ### convert the CSV data to VBO data, and write the VBO output.
 
-with sys.stdin as csv_input:
-	csv_data = read_csv(csv_input)
+if __name__ == "__main__":
+	import argparse
 
-converter = find_converter(csv_data)
-if converter is None:
-	print ("error: unable to recognize input format", file=sys.stderr)
-	sys.exit(-1)
+	parser = argparse.ArgumentParser(description="Convert CSV data to VBO format")
+	parser.add_argument("input_file", help="Input CSV file")
+	parser.add_argument("output_file", help="Output VBO file")
+	args = parser.parse_args()
 
-vbo_data = interpolate_vbo(converter.convert(csv_data), Decimal("0.10"))
+	try:
+		with open(args.input_file, "r", encoding="utf-8", newline="") as csv_file:
+			csv_data = read_csv(csv_file)
+	except IOError as e:
+		print("error: could not open input file: %s" % e, file=sys.stderr)
+		sys.exit(-1)
 
-with sys.stdout as vbo_output:
-	write_vbo(format_vbo(vbo_data), vbo_output)
+	converter = find_converter(csv_data)
+	if converter is None:
+		print("error: unable to recognize input format", file=sys.stderr)
+		sys.exit(-1)
+
+	vbo_data = interpolate_vbo(converter.convert(csv_data), Decimal("0.10"))
+
+	try:
+		with open(args.output_file, "w", encoding="utf-8", newline="") as vbo_output:
+			write_vbo(format_vbo(vbo_data), vbo_output)
+	except IOError as e:
+		print("error: could not open output file: %s" % e, file=sys.stderr)
+		sys.exit(-1)
