@@ -26,6 +26,10 @@ def main():
         input_file = args.input_pos or args.input_opt
         if not input_file:
             parser_csv.error("Input file is required. Provide it as a positional argument or using -i/--input.")
+            
+        ext = os.path.splitext(input_file)[1].lower()
+        if ext != '.csv':
+            parser_csv.error("Input file must be a .csv file.")
 
         output_file = args.output_file
         if not output_file:

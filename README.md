@@ -71,8 +71,6 @@ the vastly more accurate output of a 10 Hz GPS.
 
 ### add-video
 
-### add-video
-
 Bundles an existing .vbo file with a corresponding video file (e.g., .mp4, .avi)
 so it can be correctly loaded and synchronized in RaceLogic Circuit Tools.
 
