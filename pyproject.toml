@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vbo-tools"
+version = "0.1.0"
+description = "Tools for converting and bundling VBO files and video data"
+authors = [{ name = "Victor Pascua" }]
+requires-python = ">=3.7"
+dependencies = []
+
+[project.scripts]
+vbo-tools = "tools.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["tools"]

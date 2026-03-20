@@ -4,10 +4,20 @@ vbo-tools
 Simple utilities for RaceLogic VBO files.
 
 
-csv2vbo.py
-----------
+Usage
+-----
 
-Converts .csv files produced by various datalogging software
+Install the tools system-wide in editable mode (or normally):
+
+```bash
+pip install -e .
+```
+
+This exposes the `vbo-tools` CLI command with two main subcommands: `csv2vbo` and `add-video`.
+
+### csv2vbo
+
+Converts .csv files produced by various datalogging software to
 .vbo files produced by RaceLogic's dataloggers and understood
 by the CircuitTools software. The script requires Python 3 and
 currently supports the following .csv variants:
@@ -16,17 +26,34 @@ currently supports the following .csv variants:
   - G-Tech Fanatic
   - TrackMaster
   - QStarz LT6000
+  - RaceStudio 2
 
     TrackMaster .csv can be obtained by manual export
     from a .xls file (only the overview and lap sheets).
 
-csv2vbo.py expects a .csv file on standard input and writes
-a .vbo file to standard output. It will either detect the variant
-of the input .csv file automatically or, failing that, exit with
-an error. For example, to convert "log.csv" into "log.vbo", the 
-following command needs to be issued:
+`vbo-tools csv2vbo` expects the path to an input .csv file and an optional output .vbo file.
+It will either detect the variant of the input .csv file automatically or, failing that, exit with an error. For example, to convert "log.csv" into "log.vbo", run:
 
-$ ./csv2vbo.py < log.csv > log.vbo
+```bash
+vbo-tools csv2vbo log.csv -o log.vbo
+```
+
+You can optionally bundle a video immediately during conversion using `-v`:
+
+```bash
+vbo-tools csv2vbo log.csv -v log.mp4
+```
+*(The `-o` / `--output` flag is optional. If omitted, it will generate a file with the same name and the `.vbo` extension. If the `-v` flag is used, the intermediate `.vbo` file is automatically cleaned up, leaving only the bundled `_vid.vbo`).*
+
+**Advanced Options:**
+- `-s`, `--sync-offset`: Time offset in seconds (e.g., `2.5` or `-1.2`) to synchronize the video with the data (only applicable if `-v` is used). Possitive values: data starts later in the video. Negative values: data starts earlier in the video.
+- `--trim-start`: Seconds to drop from the start of the telemetry log.
+- `--trim-end`: Seconds to drop from the end of the telemetry log.
+
+Example with options:
+```bash
+vbo-tools csv2vbo log.csv -v log.mp4 -s 2.5 --trim-start 150 --trim-end 10.5
+```
 
 
 The script does not have overly strict requirements on the input .csv
@@ -50,3 +77,27 @@ the two data rows, with 0.1 second increments to simulate a 10 Hz GPS.
 This makes working with the data in CircuitTools more reasonable (the
 software itself does not do interpolation), but it cannot supplement
 the vastly more accurate output of a 10 Hz GPS.
+
+
+### add-video
+
+Bundles an existing .vbo file with a corresponding video file (e.g., .mp4, .avi)
+so it can be correctly loaded and synchronized in RaceLogic Circuit Tools.
+
+It will rename the video file to match the required prefix alongside the VBO file. If the original video file is located in a different directory, it will be copied instead.
+
+Usage:
+
+```bash
+vbo-tools add-video log.vbo video.mp4
+```
+
+**Advanced Options:**
+- `-s`, `--sync-offset`: Time offset in seconds (e.g., `2.5` or `-1.2`) to synchronize the video with the data. Possitive values: data starts later in the video. Negative values: data starts earlier in the video.
+- `--trim-start`: Seconds to drop from the start of the telemetry log.
+- `--trim-end`: Seconds to drop from the end of the telemetry log.
+
+Example with options:
+```bash
+vbo-tools add-video log.vbo video.mp4 -s 2.5 --trim-start 150 --trim-end 10.5
+```
